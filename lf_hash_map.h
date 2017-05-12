@@ -87,9 +87,9 @@ class LFHashMap {
 
                 void help_copy(LFHashMap * topmap, KVS * oldkvs);
 
-                KVS * check_slot(LFHashMap * topmap, KVS * oldkvs, int index, void * should_help);
+                KVS * check_slot_and_copy(LFHashMap * topmap, KVS * oldkvs, int index, void * should_help);
 
-                void copy_check_promote(LFHashMap * topmap, KVS * oldkvs, int workdone);
+                void check_slot_and_promote(LFHashMap * topmap, KVS * oldkvs, int workdone);
 
                 bool copy_slot(LFHashMap * topmap, int index, KVS * oldkvs, KVS * newkvs);
 
