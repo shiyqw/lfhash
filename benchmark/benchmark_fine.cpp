@@ -38,7 +38,7 @@ void BenchmarkFineHashMap<T>::benchmark_read_only() {
 	double start_time, end_time, best_time;
 
 	// Warm up the hashmap with sequential insertions.
-    FineHashMap<T> my_map(m_table_size);
+    FineHashMap<T> my_map(1024);
 	for (int i = 0; i < m_num_ops; i++) {
 		my_map.put(m_random_keys[i], m_random_keys[i]);
 	}
@@ -87,7 +87,7 @@ void BenchmarkFineHashMap<T>::benchmark_read_only_single_bucket() {
 	double start_time, end_time, best_time;
 
 	// Warm up the hashmap with sequential insertions.
-    FineHashMap<T> my_map(m_table_size);
+    FineHashMap<T> my_map(8);
 	for (int i = 0; i < m_num_ops; i++) {
 		my_map.put(m_random_keys[i], m_random_keys[i]);
 	}
@@ -109,8 +109,8 @@ void BenchmarkFineHashMap<T>::benchmark_read_only_single_bucket() {
 	        args[i].thread_id = (long int)i;
 	        args[i].num_threads = num_readers;
 	        args[i].num_ops = m_num_ops;
-	        args[i].percent_reads = 1.0f;
-	        args[i].keys = identical_keys;
+	        args[i].percent_reads = 0.9f;
+	        args[i].keys = m_random_keys;
 	    }
 
 	    // Take the best time of three runs.
@@ -128,7 +128,7 @@ void BenchmarkFineHashMap<T>::benchmark_read_only_single_bucket() {
 	        best_time = std::min(best_time, end_time-start_time);
 	    }
 	    std::cout << "\t" << "Read-Only Single Bucket (" << num_readers << " Reader Threads): "
-	              << m_num_ops / best_time / (1000 * 1000) << std::endl;
+	              << best_time * (1000 * 1000) << std::endl;
 	}
 	delete[] identical_keys;
 }

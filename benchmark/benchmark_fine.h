@@ -6,7 +6,7 @@ template <typename T>
 class BenchmarkFineHashMap {
 
 	public:
-		const int NUM_READERS = 24;
+		const int NUM_READERS = 48;
 		const int NUM_WRITERS = 8;
 
 		BenchmarkFineHashMap(

@@ -93,13 +93,14 @@ void LFHashMap<T,U>::CHM::help_copy(LFHashMap * topmap, KVS * oldkvs) {
     int oldlen = oldkvs->size;
 
     // Get the copy length
-    int min_copy_work = oldlen>1024?1024:oldlen;
+    int min_copy_work = oldlen>128?128:oldlen;
     
     int panic_start = -1;
     int copy_index = 0;
 
     while (this->copy_done.load(memory_order_relaxed) < oldlen) {
         copy_index = this->copy_index.load(memory_order_relaxed);
+        //printf("ci %d %d\n", copy_index, panic_start);
         if (panic_start == -1) {
             copy_index = this->copy_index.load(memory_order_relaxed);
 
@@ -109,10 +110,11 @@ void LFHashMap<T,U>::CHM::help_copy(LFHashMap * topmap, KVS * oldkvs) {
                             copy_index, copy_index+min_copy_work,
                             memory_order_relaxed, memory_order_relaxed)) {
                 copy_index = this->copy_index.load(memory_order_relaxed);
+        //printf("ci2 %d\n", copy_index);
             }
 
             // Overflow
-            if (!(copy_index) < (oldlen << 1)) {
+            if (!((copy_index) < (oldlen << 1))) {
                 panic_start = copy_index;
             }
         }
@@ -132,10 +134,12 @@ void LFHashMap<T,U>::CHM::help_copy(LFHashMap * topmap, KVS * oldkvs) {
         }
 
         copy_index += min_copy_work;
+        //printf("%d cii\n", copy_index);
         if(panic_start == -1) {
             return;
         }
     }
+    //printf("outotf\n");
 
     // check if we can promote
     check_slot_and_promote(topmap, oldkvs, 0);
@@ -219,6 +223,7 @@ bool LFHashMap<T,U>::CHM::copy_slot(LFHashMap * topmap, int index, KVS * oldkvs,
     while (!CAS_val(oldkvs, index, oldval, tomb_prime)) {
         oldval = val(oldkvs, index);
     }
+    //printf("%d is \n", copied_into_new);
 
     return copied_into_new;
 }
@@ -226,7 +231,8 @@ bool LFHashMap<T,U>::CHM::copy_slot(LFHashMap * topmap, int index, KVS * oldkvs,
 
 // Constructor
 template <typename T, typename U>
-LFHashMap<T,U>::LFHashMap(int init_size) {
+LFHashMap<T,U>::LFHashMap(int init_size, int _version) {
+    version = _version;
     KVS * kvs = new KVS(init_size);
     void * chm = (void*) new CHM(0);
     kvs->data[0].store(chm, memory_order_relaxed);
@@ -247,7 +253,7 @@ U LFHashMap<T,U>::get(T key) {
     KVS * kvs = mapkvs.load(memory_order_acquire);
     Slot * val_slot = get_slot(this, kvs, key_slot, fullhash);
     if (val_slot == NULL) {
-        return NULL;
+        return U("0");
     }
     //if (val_slot == tomb_prime) {
     //    return NULL;
@@ -267,7 +273,8 @@ void LFHashMap<T,U>::put(T kkey, U val) {
 // Remove = put a tombstone
 template <typename T, typename U>
 bool LFHashMap<T,U>::remove(T key) {
-    return put_if_match(&key, tomb_stone, no_match_old);
+    T* k = new T(key);
+    return put_if_match(k, (U*)tomb_stone, no_match_old);
 }
 
 // replace = put a new if old = some value
@@ -320,7 +327,7 @@ int LFHashMap<T,U>::hash(Slot * key_slot) {
     h += (h << 3);
     h ^= (h >> 6);
     h += (h << 2) + (h << 14);
-    return h ^ (h >> 16);
+    return (h ^ (h >> 16)) ;
 }
 
 // Check if it is a tomb_prime or a prime box
@@ -331,7 +338,7 @@ inline bool LFHashMap<T,U>::is_prime(Slot * slot) {
 
 template <typename T, typename U>
 int LFHashMap<T,U>::get_reprobe_limit(int len) {
-    return reprobe_limit + (len>>2);
+    return reprobe_limit + (len>>1);
 }
 
 template <typename T, typename U>
@@ -415,7 +422,9 @@ Slot * LFHashMap<T,U>::get_slot(LFHashMap * topmap, KVS * kvs, Slot * key_slot, 
                         key_slot, fullhash);
         }
 
-        index = (index+1)&(len-1);
+        index = (index+((reprobe_cnt<<1)-1)*(((reprobe_cnt&1)<<1)-1))&(len-1);
+
+        //index = (index+1)&(len-1);
     }
 }
 
@@ -430,6 +439,10 @@ U* LFHashMap<T,U>::put_if_match(T* kkey, U* val, Slot * oldval_slot) {
 
     Slot * key_slot = new Slot(false, (void*)kkey);
     Slot * value_slot = new Slot(false, (void*)val);
+    if (((Slot*) val) == tomb_stone) {
+        delete value_slot;
+        value_slot = tomb_stone;
+    }
 
     Slot * ret = put_if_match(this, kvs, key_slot, value_slot, oldval_slot);
     kvs = this->mapkvs.load(memory_order_acquire);
@@ -488,8 +501,9 @@ Slot* LFHashMap<T,U>::put_if_match(LFHashMap * topmap, KVS * kvs, Slot * key_slo
             return put_if_match(topmap, newkvs, key_slot, val_slot, oldval_slot);
         }
 
+        index = (index+((reprobe_cnt<<1)-1)*(((reprobe_cnt&1)<<1)-1))&(len-1);
         // Next index
-        index = (index+1)&(len-1);
+        //index = (index+1)&(len-1);
     }
 
 

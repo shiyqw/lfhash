@@ -6,7 +6,7 @@ template <typename T>
 class BenchmarkLFHashMap {
 
 	public:
-		const int NUM_READERS = 24;
+		const int NUM_READERS = 48;
 		const int NUM_WRITERS = 8;
 
 		BenchmarkLFHashMap(
@@ -20,6 +20,7 @@ class BenchmarkLFHashMap {
 		void benchmark_write_only();
 		void benchmark_read_only_single_bucket();
 		void run_all();
+        void check();
 
 	private:
 		int m_num_ops;

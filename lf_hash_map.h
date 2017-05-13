@@ -62,21 +62,22 @@ class LFHashMap {
             private:
                 atomic<KVS*> newkvs;
 
-                atomic_int size;
-
                 atomic_int slots;
 
                 atomic_int copy_index;
 
                 atomic_int copy_done;
+
+                atomic_int size;
             
             public:
+
                 CHM(int _size) {
                     newkvs.store(NULL, memory_order_relaxed);
                     size.store(_size, memory_order_relaxed);
-                    slots.store(_size, memory_order_relaxed);
-                    copy_index.store(_size, memory_order_relaxed);
-                    copy_done.store(_size, memory_order_relaxed);
+                    slots.store(0, memory_order_relaxed);
+                    copy_index.store(0, memory_order_relaxed);
+                    copy_done.store(0, memory_order_relaxed);
 
                 }
 
@@ -96,7 +97,8 @@ class LFHashMap {
         };
 
 	public:
-		LFHashMap(int table_size=64); // imp
+
+		LFHashMap(int table_size=64, int version=0); // imp
 
 		~LFHashMap(); // imp
 
@@ -116,6 +118,7 @@ class LFHashMap {
 
 	private:
 
+        int version;
         static Slot* const match_any;
         static Slot* const no_match_old;
 

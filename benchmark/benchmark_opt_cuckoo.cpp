@@ -14,6 +14,7 @@ BenchmarkOptCuckooHashMap<T>::BenchmarkOptCuckooHashMap(
 	m_space_efficiency = space_efficiency;
 	m_slots_per_bucket = slots_per_bucket;
 	m_num_buckets = (1.0f/m_space_efficiency) * m_num_ops / float(m_slots_per_bucket);
+    //m_num_ops = 8;
 
 	m_random_keys = new std::string[m_num_ops];
 	for (int i=0; i<m_num_ops; i++) {
@@ -68,7 +69,7 @@ void BenchmarkOptCuckooHashMap<T>::benchmark_read_only_single_bucket() {
 	double start_time, end_time, best_time;
 
 	// Warm up the hashmap with sequential insertions.
-    OptimisticCuckooHashMap<T> my_map(m_num_buckets);
+    OptimisticCuckooHashMap<T> my_map(1024);
 	for (int i = 0; i < m_num_ops; i++) {
 		my_map.put(m_random_keys[i], m_random_keys[i]);
 	}
@@ -90,9 +91,11 @@ void BenchmarkOptCuckooHashMap<T>::benchmark_read_only_single_bucket() {
 	        args[i].thread_id = (long int)i;
 	        args[i].num_threads = num_readers;
 	        args[i].num_ops = m_num_ops;
-	        args[i].percent_reads = 1.0f;
-	        args[i].keys = identical_keys;
+	        args[i].percent_reads = 0.9f;
+	        args[i].keys = m_random_keys;
 	    }
+
+        printf("%d ops\n", m_num_ops);
 
 	    best_time = 1e30;
 	    for (int i = 0; i < 10; i++) {
@@ -108,7 +111,7 @@ void BenchmarkOptCuckooHashMap<T>::benchmark_read_only_single_bucket() {
 	        best_time = std::min(best_time, end_time-start_time);
 	    }
 	    std::cout << "\t" << "Read-Only Single Bucket (" << num_readers << " Reader Threads): "
-	              << m_num_ops / best_time / (1000 * 1000) << std::endl;
+	              <<  best_time * (1000 * 1000) << std::endl;
 	}
 	delete[] identical_keys;
 }
@@ -174,11 +177,11 @@ void BenchmarkOptCuckooHashMap<T>::run_all() {
 
 	std::cout << "Benchmarking Optimistic Cuckoo HashMap, " << m_num_ops << " Operations..." << std::endl;
 
-	benchmark_random_interleaved_read_write();
-	benchmark_read_only();
-	benchmark_write_only();
+	//benchmark_random_interleaved_read_write();
+	//benchmark_read_only();
+	//benchmark_write_only();
 	benchmark_read_only_single_bucket();
-	benchmark_space_efficiency();
+	//benchmark_space_efficiency();
 
     std::cout << std::endl;
 }

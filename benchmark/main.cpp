@@ -20,8 +20,8 @@
 #include "../cuckoo_fine_hash_map.h"
 // #include "../optimistic_cuckoo_tag_locklater_hash_map.h"
 
-#define NUM_THREADS 24
-#define NUM_READERS 6
+#define NUM_THREADS 48
+#define NUM_READERS 12
 // #define NUM_WRITERS 2
 
 //#define NUM_BUCKETS 10 * 1000 * 1000
@@ -30,7 +30,7 @@
 // #define NUM_BUCKETS 1 * 1000 * 1000
 // #define NUM_OPS 1 * 1000 * 1000
 
-#define NUM_OPS 100
+#define NUM_OPS 10000
 
 void benchmark_fine_cuckoo() {
 
@@ -103,14 +103,17 @@ int main() {
 
     std::cout << "***** Starting benchmark with " << NUM_OPS << " operations *****" << std::endl;
 
+    BenchmarkLFHashMap<std::string> benchmark_lf_check(NUM_OPS);
+    benchmark_lf_check.check();
+
     BenchmarkUnorderedMap<std::string> benchmark_unordered_map(NUM_OPS);
     benchmark_unordered_map.run_all();
 
     BenchmarkFineHashMap<std::string> benchmark_fine(NUM_OPS);
     benchmark_fine.run_all();
 
-    //BenchmarkCuckooHashMap<std::string> benchmark_cuckoo(NUM_OPS);
-    //benchmark_cuckoo.run_all();
+    ////BenchmarkCuckooHashMap<std::string> benchmark_cuckoo(NUM_OPS);
+    ////benchmark_cuckoo.run_all();
 
     ////BenchmarkFineCuckoo<std::string> benchmark_fine_cuckoo(NUM_OPS);
     ////benchmark_fine_cuckoo.run_all();
@@ -120,6 +123,8 @@ int main() {
 
     BenchmarkLFHashMap<std::string> benchmark_lf(NUM_OPS);
     benchmark_lf.run_all();
+    //BenchmarkLFHashMap4<std::string> benchmark4_lf(NUM_OPS);
+    //benchmark_lf4.run_all();
     //BenchmarkOptCuckooTagHashMap<std::string> benchmark_opt_cuckoo_tag(NUM_OPS);
     //benchmark_opt_cuckoo_tag.run_all();
 

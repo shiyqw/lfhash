@@ -38,7 +38,7 @@ void BenchmarkLFHashMap<T>::benchmark_read_only() {
 	double start_time, end_time, best_time;
 
 	// Warm up the hashmap with sequential insertions.
-    LFHashMap<std::string, T> my_map(m_table_size);
+    LFHashMap<std::string, T> my_map(1024);
 	for (int i = 0; i < m_num_ops; i++) {
 		my_map.put(m_random_keys[i], m_random_keys[i]);
 	}
@@ -46,13 +46,14 @@ void BenchmarkLFHashMap<T>::benchmark_read_only() {
 	// Setup thread args.
     pthread_t workers[NUM_READERS];
     WorkerArgs args[NUM_READERS];
+    printf("return\n");
 
     for (int i = 0; i < NUM_READERS; i++) {
         args[i].my_map = (void*)&my_map;
         args[i].thread_id = (long int)i;
         args[i].num_threads = NUM_READERS;
         args[i].num_ops = m_num_ops;
-        args[i].percent_reads = 1.0f;
+        args[i].percent_reads = 0.5f;
         args[i].keys = m_random_keys;
     }
 
@@ -62,8 +63,8 @@ void BenchmarkLFHashMap<T>::benchmark_read_only() {
 
         start_time = CycleTimer::currentSeconds();
 	    for (int j = 0; j < NUM_READERS; j++) {
-	        //pthread_create(&workers[j], NULL,
-	        	//thread_send_requests<LFHashMap<std::string, T>>, &args[j]);
+	        pthread_create(&workers[j], NULL,
+	        	thread_send_requests<LFHashMap<std::string, T>>, &args[j]);
                 ;
 	    }
 	    for (int j = 0; j < NUM_READERS; j++) {
@@ -88,13 +89,14 @@ void BenchmarkLFHashMap<T>::benchmark_read_only_single_bucket() {
 	double start_time, end_time, best_time;
 
 	// Warm up the hashmap with sequential insertions.
-    LFHashMap<std::string, T> my_map(8);
+    LFHashMap<std::string, T> my_map(256);
 	for (int i = 0; i < m_num_ops; i++) {
+        //printf("put\n");
 		my_map.put(m_random_keys[i], m_random_keys[i]);
 	}
 
 	//for (int i = 0; i < m_num_ops; i++) {
-	//	my_map.get(m_random_keys[i]);
+	//	uy_map.get(m_random_keys[i]);
 	//}
 	// Concurrently read the same key.
 	std::string* identical_keys = new std::string[m_num_ops];
@@ -114,8 +116,8 @@ void BenchmarkLFHashMap<T>::benchmark_read_only_single_bucket() {
 	        args[i].thread_id = (long int)i;
 	        args[i].num_threads = num_readers;
 	        args[i].num_ops = m_num_ops;
-	        args[i].percent_reads = 1.0f;
-	        args[i].keys = identical_keys;
+	        args[i].percent_reads = 0.9f;
+	        args[i].keys = m_random_keys;
 	    }
 
 	    // Take the best time of three runs.
@@ -133,7 +135,7 @@ void BenchmarkLFHashMap<T>::benchmark_read_only_single_bucket() {
 	        best_time = std::min(best_time, end_time-start_time);
 	    }
 	    std::cout << "\t" << "Read-Only Single Bucket (" << num_readers << " Reader Threads): "
-	              << m_num_ops / best_time / (1000 * 1000) << std::endl;
+	              <<  best_time * (1000 * 1000) << std::endl;
 	}
 	delete[] identical_keys;
 }
@@ -141,12 +143,61 @@ void BenchmarkLFHashMap<T>::benchmark_read_only_single_bucket() {
 template <typename T>
 void BenchmarkLFHashMap<T>::run_all() {
 
-	std::cout << "Benchmarking Fine HashMap, " << m_num_ops << " Operations..." << std::endl;
+	std::cout << "Benchmarking LF HashMap, " << m_num_ops << " Operations..." << std::endl;
 
 	// benchmark_random_interleaved_read_write();
-	// benchmark_read_only();
+	 //benchmark_read_only();
 	// benchmark_write_only();
-	benchmark_read_only_single_bucket();
+	 benchmark_read_only_single_bucket();
 
 	std::cout << std::endl;
 }
+
+template <typename T>
+void BenchmarkLFHashMap<T>::check() {
+    std::cout << "Check correctness for get and put" << std::endl;
+
+	// Warm up the hashmap with sequential insertions.
+    LFHashMap<std::string, T> my_map(8);
+	for (int i = 0; i < m_num_ops; i++) {
+		my_map.put(m_random_keys[i], m_random_keys[i]);
+	}
+
+    //std::cout << my_map.get_size();
+
+	// Setup thread args.
+    pthread_t workers[NUM_READERS];
+    WorkerArgs args[NUM_READERS];
+    //return;
+
+    for (int i = 0; i < NUM_READERS; i++) {
+        args[i].my_map = (void*)&my_map;
+        args[i].thread_id = (long int)i;
+        args[i].num_threads = NUM_READERS;
+        args[i].num_ops = m_num_ops;
+        args[i].percent_reads = 1.0f;
+        args[i].keys = m_random_keys;
+    }
+
+    // Take the best time of three runs.
+    for (int i = 0; i < 1; i++) {
+
+	    for (int j = 0; j < NUM_READERS; j++) {
+	        pthread_create(&workers[j], NULL,
+	        	thread_send_check_requests<LFHashMap<std::string, T>>, &args[j]);
+	    }
+	    for (int j = 0; j < NUM_READERS; j++) {
+	        pthread_join(workers[j], NULL);
+	    }
+        std::cout << "Check Put/Get Done\n";
+    }
+	for (int i = 0; i < m_num_ops; i++) {
+		my_map.remove(m_random_keys[i]);
+        //std::cout << my_map.get(m_random_keys[i]) << std::endl;
+        //if(!((std::string)my_map.get(m_random_keys[i])).compare(std::string("0"))) std::cout << "Error\n";
+	}
+
+    std::cout << "Check Remove Done";
+
+}
+
